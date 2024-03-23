@@ -32,6 +32,91 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
 
+    const database = client.db("matrimony");
+    const users = database.collection("users");
+    const biodatas = database.collection("biodatas");
+
+    //  jwt
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "2h",
+      });
+      res.send({ token });
+    });
+
+    // middlewares
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
+      const token = req.headers.authorization.split(" ")[1];
+      // console.log(token);
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, dec) => {
+        if (err) {
+          return res.status(401).send({ message: "unauthorized access" });
+        }
+        req.dec = dec;
+
+        next();
+      });
+    };
+
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.dec.email;
+      const query = { email: email };
+      const user = await users.findOne(query);
+      const isAdmin = user?.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
+    //users
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      // insert email if does not exist
+      const query = { email: user.email };
+
+      const exist = await users.findOne(query);
+      if (exist) {
+        return res.send({ message: "user already exists", insertedId: null });
+      }
+      const result = await users.insertOne(user);
+      res.send(result);
+    });
+
+    // biodatas
+    app.post("/biodatas", verifyToken, async (req, res) => {
+      const biodata = req.body;
+      const result = await biodatas.insertOne(biodata);
+      res.send(result);
+    });
+
+    app.get("/biodata/mine", verifyToken, async (req, res) => {
+      let query = {};
+      if (req.query?.email) {
+        query = { email: req.query?.email };
+      }
+      const result = await biodatas.findOne(query);
+      res.send(result);
+    });
+    app.patch("/biodata/mine", verifyToken, async (req, res) => {
+      let query = {};
+      if (req.query?.email) {
+        query = { email: req.query?.email };
+      }
+
+      const update = req.body;
+
+      const result = await campaigns.updateOne(query, {
+        $set: update,
+      });
+
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
@@ -39,7 +124,7 @@ async function run() {
     );
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
