@@ -95,12 +95,15 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/biodata/mine", verifyToken, async (req, res) => {
-      let query = {};
-      if (req.query?.email) {
-        query = { email: req.query?.email };
-      }
-      const result = await biodatas.findOne(query);
+    app.get("/biodata/mine/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+
+      const result = await biodatas.findOne(filter);
+      res.send(result);
+    });
+    app.get("/biodatas", verifyToken, async (req, res) => {
+      const result = await biodatas.find().toArray();
       res.send(result);
     });
     app.patch("/biodata/mine", verifyToken, async (req, res) => {
@@ -110,8 +113,8 @@ async function run() {
       }
 
       const update = req.body;
-
-      const result = await campaigns.updateOne(query, {
+      // console.log(update);
+      const result = await biodatas.updateOne(query, {
         $set: update,
       });
 
