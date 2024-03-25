@@ -4,7 +4,7 @@ const cors = require("cors");
 
 const jwt = require("jsonwebtoken");
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 require("dotenv").config();
 
@@ -35,6 +35,7 @@ async function run() {
     const database = client.db("matrimony");
     const users = database.collection("users");
     const biodatas = database.collection("biodatas");
+    const favbiodatas = database.collection("favbiodatas");
 
     //  jwt
     app.post("/jwt", async (req, res) => {
@@ -102,6 +103,12 @@ async function run() {
       const result = await biodatas.findOne(filter);
       res.send(result);
     });
+    app.get("/biodata/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await biodatas.findOne(filter);
+      res.send(result);
+    });
     app.get("/biodatas", verifyToken, async (req, res) => {
       const result = await biodatas.find().toArray();
       res.send(result);
@@ -120,6 +127,31 @@ async function run() {
 
       res.send(result);
     });
+
+    // fav bios
+    app.post("/favourites", verifyToken, async (req, res) => {
+      const favbio = req.body;
+      const result = await favbiodatas.insertOne(favbio);
+      res.send(result);
+    });
+
+    app.get("/favourites/mine", verifyToken, async (req, res) => {
+      let query = {};
+      if (req.query?.user) {
+        query = { user: req.query.user };
+      }
+      const result = await favbiodatas.find(query).toArray();
+
+      res.send(result);
+    });
+    app.delete("/favourites/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+      const result = await favbiodatas.deleteOne(filter);
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
