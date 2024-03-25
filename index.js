@@ -111,7 +111,22 @@ async function run() {
       res.send(result);
     });
     app.get("/biodatas", verifyToken, async (req, res) => {
-      const result = await biodatas.find().toArray();
+      let query = {};
+      const filter = req.query;
+      const type = filter.type;
+      const division = filter.division;
+      const age = filter.age.split(',');
+      const low =parseInt(age[0])
+      const high =parseInt(age[1])
+      // console.log(typeof(high));
+      if (type || division || low || high) {
+        query = {
+          type: { $regex: type },
+          present_division: { $regex: division },
+          "age": { $gte: low, $lte: high },
+        };
+      }
+      const result = await biodatas.find(query).toArray();
       res.send(result);
     });
     app.patch("/biodata/mine", verifyToken, async (req, res) => {
