@@ -36,6 +36,7 @@ async function run() {
     const users = database.collection("users");
     const biodatas = database.collection("biodatas");
     const favbiodatas = database.collection("favbiodatas");
+    const requestInfo = database.collection("requestInfo");
 
     //  jwt
     app.post("/jwt", async (req, res) => {
@@ -134,6 +135,11 @@ async function run() {
       const result = await favbiodatas.insertOne(favbio);
       res.send(result);
     });
+    app.post("/request-info", verifyToken, async (req, res) => {
+      const reqInfo = req.body;
+      const result = await requestInfo.insertOne(reqInfo);
+      res.send(result);
+    });
 
     app.get("/favourites/mine", verifyToken, async (req, res) => {
       let query = {};
@@ -144,11 +150,27 @@ async function run() {
 
       res.send(result);
     });
+    app.get("/requests/mine", verifyToken, async (req, res) => {
+      let query = {};
+      if (req.query?.user) {
+        query = { user: req.query.user };
+      }
+      const result = await requestInfo.find(query).toArray();
+
+      res.send(result);
+    });
     app.delete("/favourites/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
       const result = await favbiodatas.deleteOne(filter);
+      res.send(result);
+    });
+    app.delete("/requests/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+      const result = await requestInfo.deleteOne(filter);
       res.send(result);
     });
 
